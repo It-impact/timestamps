@@ -57,61 +57,234 @@
         return node;
     }
 
-    function addOption(select, value, label, selected) {
-        var o = document.createElement('option');
-        o.value = value;
-        o.textContent = label;
-        o.selected = !!selected;
-        select.appendChild(o);
-    }
+    // ---------- clock picker ----------
+    // An in-page clock dial modeled on Android's time picker. Built entirely in
+    // the page, so it never hands off to the phone's clock / time picker.
+    var picker = (function () {
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        var C = 128, R_OUT = 100, R_IN = 64, R_SEL = 20;
 
-    // A box that reads like "01:29 PM" but each part is a tappable dropdown.
-    // Dropdowns open the browser's own list, never the Android clock/time picker.
-    function timeBox(value, label, onPick) {
-        var t = splitTime(value);
-        var box = make('div', 'time-box');
-        var hour = make('select');
-        var min = make('select');
-        var ampm = make('select');
-        hour.setAttribute('aria-label', label + ' hour');
-        min.setAttribute('aria-label', label + ' minute');
-        ampm.setAttribute('aria-label', label + ' AM/PM');
+        var overlay, hourBtn, minBtn, amBtn, pmBtn, ampmBox, svg, hand, knob, knobDot, labels, labelsHi, clipKnob;
+        var state = null;      // { h: 0-23, m: 0-59 }
+        var mode = 'hour';     // 'hour' | 'minute'
+        var done = null;
+        var dragging = false;
 
-        addOption(hour, '', '--', !t);
-        if (use24h) {
-            for (var h = 0; h < 24; h++) addOption(hour, h, two(h), t && t.h === h);
-        } else {
-            var h12 = t ? (t.h % 12 || 12) : 0;
-            for (var i = 1; i <= 12; i++) addOption(hour, i, two(i), h12 === i);
+        function btn(cls, text, onTap) {
+            var b = make('button', cls, text);
+            b.type = 'button';
+            b.addEventListener('click', onTap);
+            return b;
         }
 
-        addOption(min, '', '--', !t);
-        for (var m = 0; m < 60; m++) addOption(min, m, two(m), t && t.m === m);
+        function svgEl(tag, attrs) {
+            var n = document.createElementNS(SVGNS, tag);
+            for (var k in attrs) n.setAttribute(k, attrs[k]);
+            return n;
+        }
 
-        addOption(ampm, '', '--', !t);
-        addOption(ampm, 'AM', 'AM', t && t.h < 12);
-        addOption(ampm, 'PM', 'PM', t && t.h >= 12);
+        function polar(angleDeg, r) {
+            var a = angleDeg * Math.PI / 180;
+            return { x: C + r * Math.sin(a), y: C - r * Math.cos(a) };
+        }
 
-        function changed() {
-            if (hour.value === '') { onPick(''); return; }
-            var hr = +hour.value;
-            if (!use24h) {
-                hr = hr % 12;
-                if (ampm.value === 'PM') hr += 12;
+        function build() {
+            overlay = make('div', 'ck-overlay');
+            var dlg = make('div', 'ck-dialog');
+            dlg.setAttribute('role', 'dialog');
+            dlg.setAttribute('aria-modal', 'true');
+
+            dlg.appendChild(make('div', 'ck-caption', 'Select time'));
+
+            var head = make('div', 'ck-head');
+            hourBtn = btn('ck-num', '', function () { setMode('hour'); });
+            minBtn = btn('ck-num', '', function () { setMode('minute'); });
+            head.appendChild(hourBtn);
+            head.appendChild(make('span', 'ck-colon', ':'));
+            head.appendChild(minBtn);
+
+            ampmBox = make('div', 'ck-ampm');
+            amBtn = btn('ck-period', 'AM', function () { if (state.h >= 12) state.h -= 12; refresh(); });
+            pmBtn = btn('ck-period', 'PM', function () { if (state.h < 12) state.h += 12; refresh(); });
+            ampmBox.appendChild(amBtn);
+            ampmBox.appendChild(pmBtn);
+            head.appendChild(ampmBox);
+            dlg.appendChild(head);
+
+            var dialWrap = make('div', 'ck-dial');
+            svg = svgEl('svg', { viewBox: '0 0 256 256', 'aria-hidden': 'true' });
+            svg.appendChild(svgEl('circle', { cx: C, cy: C, r: 124, 'class': 'ck-face' }));
+            // Numbers, then the hand/knob on top, then a white copy of the numbers
+            // clipped to the knob so whatever sits under the knob reads white.
+            labels = svgEl('g', {});
+            svg.appendChild(labels);
+            hand = svgEl('line', { x1: C, y1: C, 'class': 'ck-hand' });
+            svg.appendChild(hand);
+            svg.appendChild(svgEl('circle', { cx: C, cy: C, r: 4, 'class': 'ck-pin' }));
+            knob = svgEl('circle', { r: R_SEL, 'class': 'ck-knob' });
+            svg.appendChild(knob);
+            var defs = svgEl('defs', {});
+            var clip = svgEl('clipPath', { id: 'ck-clip' });
+            clipKnob = svgEl('circle', { r: R_SEL });
+            clip.appendChild(clipKnob);
+            defs.appendChild(clip);
+            svg.appendChild(defs);
+            labelsHi = svgEl('g', { 'clip-path': 'url(#ck-clip)', 'class': 'ck-hi' });
+            svg.appendChild(labelsHi);
+            knobDot = svgEl('circle', { r: 3, 'class': 'ck-knobdot' });
+            svg.appendChild(knobDot);
+            dialWrap.appendChild(svg);
+            dlg.appendChild(dialWrap);
+
+            svg.addEventListener('pointerdown', function (e) {
+                dragging = true;
+                try { svg.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
+                pick(e);
+                e.preventDefault();
+            });
+            svg.addEventListener('pointermove', function (e) { if (dragging) { pick(e); e.preventDefault(); } });
+            function release() {
+                if (!dragging) return;
+                dragging = false;
+                if (mode === 'hour') setTimeout(function () { setMode('minute'); }, 150);
             }
-            onPick(two(hr) + ':' + two(min.value === '' ? 0 : +min.value));
-        }
-        hour.addEventListener('change', changed);
-        min.addEventListener('change', changed);
-        ampm.addEventListener('change', changed);
+            svg.addEventListener('pointerup', release);
+            svg.addEventListener('pointercancel', function () { dragging = false; });
 
-        box.appendChild(hour);
-        box.appendChild(make('span', 'sep', ':'));
-        box.appendChild(min);
-        if (!use24h) {
-            box.appendChild(make('span', 'gap'));
-            box.appendChild(ampm);
+            var foot = make('div', 'ck-foot');
+            foot.appendChild(btn('ck-text ck-clear', 'Clear', function () { finish(''); }));
+            foot.appendChild(btn('ck-text', 'Now', function () {
+                var t = splitTime(currentTime()); state.h = t.h; state.m = t.m; refresh();
+            }));
+            foot.appendChild(make('span', 'ck-spacer'));
+            foot.appendChild(btn('ck-text', 'Cancel', close));
+            foot.appendChild(btn('ck-text ck-ok', 'OK', function () { finish(two(state.h) + ':' + two(state.m)); }));
+            dlg.appendChild(foot);
+
+            overlay.appendChild(dlg);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && overlay.classList.contains('open')) close();
+            });
+            document.body.appendChild(overlay);
         }
+
+        // Convert a pointer position on the dial into an hour or minute.
+        function pick(e) {
+            var box = svg.getBoundingClientRect();
+            var x = (e.clientX - box.left) * 256 / box.width - C;
+            var y = (e.clientY - box.top) * 256 / box.height - C;
+            var ang = (Math.atan2(x, -y) * 180 / Math.PI + 360) % 360;
+            var dist = Math.sqrt(x * x + y * y);
+
+            if (mode === 'hour') {
+                var idx = Math.round(ang / 30) % 12;
+                if (use24h) {
+                    state.h = dist < (R_OUT + R_IN) / 2 ? idx + 12 : idx;
+                } else {
+                    state.h = idx + (state.h >= 12 ? 12 : 0);
+                }
+            } else {
+                state.m = Math.round(ang / 6) % 60;
+            }
+            refresh();
+        }
+
+        function setMode(m) {
+            mode = m;
+            drawLabels();
+            refresh();
+        }
+
+        function drawLabels() {
+            labels.textContent = '';
+            labelsHi.textContent = '';
+            var items = [];
+            if (mode === 'minute') {
+                for (var m = 0; m < 60; m += 5) items.push({ v: m, text: two(m), ang: m * 6, r: R_OUT });
+            } else if (use24h) {
+                for (var h = 0; h < 12; h++) items.push({ v: h, text: two(h), ang: h * 30, r: R_OUT });
+                for (var h2 = 12; h2 < 24; h2++) items.push({ v: h2, text: String(h2), ang: (h2 - 12) * 30, r: R_IN, inner: true });
+            } else {
+                for (var i = 0; i < 12; i++) items.push({ v: i === 0 ? 12 : i, text: String(i === 0 ? 12 : i), ang: i * 30, r: R_OUT });
+            }
+            items.forEach(function (it) {
+                var p = polar(it.ang, it.r);
+                var t = svgEl('text', {
+                    x: p.x, y: p.y, 'text-anchor': 'middle', 'dominant-baseline': 'central',
+                    'class': 'ck-label' + (it.inner ? ' ck-inner' : '')
+                });
+                t.textContent = it.text;
+                labels.appendChild(t);
+                labelsHi.appendChild(t.cloneNode(true));
+            });
+        }
+
+        function refresh() {
+            var h12 = state.h % 12 || 12;
+            hourBtn.textContent = use24h ? two(state.h) : two(h12);
+            minBtn.textContent = two(state.m);
+            hourBtn.classList.toggle('on', mode === 'hour');
+            minBtn.classList.toggle('on', mode === 'minute');
+            ampmBox.style.display = use24h ? 'none' : '';
+            amBtn.classList.toggle('on', state.h < 12);
+            pmBtn.classList.toggle('on', state.h >= 12);
+
+            var ang, r;
+            if (mode === 'hour') {
+                ang = (state.h % 12) * 30;
+                r = use24h && state.h >= 12 ? R_IN : R_OUT;
+            } else {
+                ang = state.m * 6;
+                r = R_OUT;
+            }
+            var p = polar(ang, r);
+            var edge = polar(ang, r - R_SEL);
+            hand.setAttribute('x2', edge.x);
+            hand.setAttribute('y2', edge.y);
+            knob.setAttribute('cx', p.x);
+            knob.setAttribute('cy', p.y);
+            knobDot.setAttribute('cx', p.x);
+            knobDot.setAttribute('cy', p.y);
+            clipKnob.setAttribute('cx', p.x);
+            clipKnob.setAttribute('cy', p.y);
+            // Minutes between the 5-minute labels show a small dot, like Android.
+            knobDot.style.display = (mode === 'minute' && state.m % 5 !== 0) ? '' : 'none';
+
+        }
+
+        function open(value, callback) {
+            if (!overlay) build();
+            state = splitTime(value) || splitTime(currentTime());
+            done = callback;
+            mode = 'hour';
+            drawLabels();
+            refresh();
+            overlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function close() {
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+            done = null;
+        }
+
+        function finish(value) {
+            var cb = done;
+            close();
+            if (cb) cb(value);
+        }
+
+        return { open: open };
+    })();
+
+    // Looks exactly like the original time box; the whole box is tappable.
+    function timeBox(value, label, onPick) {
+        var box = make('button', 'time-box', displayTime(value) || ' ');
+        box.type = 'button';
+        box.setAttribute('aria-label', label + ' time: ' + (displayTime(value) || 'not set'));
+        box.addEventListener('click', function () { picker.open(value, onPick); });
         return box;
     }
 

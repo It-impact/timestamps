@@ -140,38 +140,148 @@ body {
 }
 .arrow:hover { background: #004d66; }
 
-/* ---------- Time box (dropdowns styled to look like plain text) ---------- */
+/* ---------- Time box (looks like the original display; whole box is tappable) ---------- */
 .time-box {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     min-width: 100px;
+    margin: 0;
     padding: 5px;
     border: 1px solid #ccc;
     border-radius: 4px;
     background: #fff;
+    color: inherit;
+    font-family: inherit;
     font-size: 14px;
     line-height: normal;
+    text-align: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(0, 102, 139, 0.15);
+}
+.time-box:focus-visible { outline: 2px solid #00668B; outline-offset: 1px; }
+
+/* ---------- Clock picker (Android-style) ---------- */
+.ck-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.45);
+}
+.ck-overlay.open { display: flex; }
+
+.ck-dialog {
+    width: 100%;
+    max-width: 328px;
+    max-height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 20px 20px 10px;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+    font-family: Arial, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.ck-dialog button { -webkit-tap-highlight-color: transparent; font-family: inherit; }
+
+.ck-caption {
+    margin-bottom: 16px;
+    color: #555;
+    font-size: 12px;
+    letter-spacing: 0.04em;
 }
 
-.time-box select {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    margin: 0;
+.ck-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.ck-num {
+    width: 88px;
+    height: 72px;
     padding: 0;
     border: none;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: center;
-    text-align-last: center;
+    border-radius: 10px;
+    background: #eceff1;
+    color: #333;
+    font-size: 48px;
+    line-height: 72px;
     cursor: pointer;
 }
-.time-box select:focus { outline: none; background: #e8f1f5; border-radius: 2px; }
+.ck-num.on { background: #cfe4ec; color: #00668B; }
 
-.time-box .gap { width: 0.25em; }
+.ck-colon { font-size: 48px; color: #333; line-height: 72px; }
+
+.ck-ampm {
+    display: flex;
+    flex-direction: column;
+    height: 72px;
+    margin-left: 8px;
+    border: 1px solid #999;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.ck-period {
+    flex: 1;
+    width: 48px;
+    padding: 0;
+    border: none;
+    background: #fff;
+    color: #555;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.ck-period + .ck-period { border-top: 1px solid #999; }
+.ck-period.on { background: #cfe4ec; color: #00668B; }
+
+.ck-dial {
+    width: 256px;
+    max-width: 100%;
+    margin: 0 auto 12px;
+}
+.ck-dial svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;
+    cursor: pointer;
+}
+.ck-face { fill: #eceff1; }
+.ck-hand { stroke: #00668B; stroke-width: 2; }
+.ck-pin { fill: #00668B; }
+.ck-knob { fill: #00668B; }
+.ck-knobdot { fill: #fff; }
+.ck-label { fill: #333; font-size: 16px; pointer-events: none; }
+.ck-label.ck-inner { font-size: 13px; fill: #666; }
+.ck-hi .ck-label { fill: #fff; }
+
+.ck-foot {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.ck-spacer { flex: 1; }
+.ck-text {
+    padding: 10px 12px;
+    border: none;
+    border-radius: 20px;
+    background: transparent;
+    color: #00668B;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.ck-text:active { background: #e6f0f4; }
+.ck-clear { color: #dc3545; }
 
 /* ---------- Phones ---------- */
 @media screen and (max-width: 768px) {
