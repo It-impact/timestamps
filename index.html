@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timestamp Manager</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1 id="formatToggle" class="page-title">12hr Timestamp Manager</h1>
+
+    <main class="panel">
+        <form id="addForm" autocomplete="off">
+            <input type="text" id="newTitle" class="title-input" placeholder="Event Title" required>
+            <div class="toolbar">
+                <button type="submit" class="btn">Add Event</button>
+                <button type="button" id="clearBtn" class="btn btn-wide btn-red">Clear All</button>
+                <button type="button" id="copyBtn" class="btn btn-wide">Copy Report Format</button>
+            </div>
+        </form>
+
+        <div id="entries" class="entries"></div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

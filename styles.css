@@ -1,0 +1,181 @@
+/* ---------- Page ---------- */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f4f9;
+    color: #333;
+}
+
+.page-title {
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+    background: #00668B;
+    color: #fff;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+.page-title:hover { background: #004d66; }
+
+.panel {
+    display: block;
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ---------- Add form ---------- */
+#addForm {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.title-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    background: #00668B;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+}
+.btn:hover { background: #004d66; }
+.btn-wide { padding: 10px 20px; }
+.btn-red { background: #dc3545; }
+.btn-red:hover { background: #c82333; }
+
+/* ---------- Entries ---------- */
+.entries {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.entry {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.entry-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.entry-title {
+    margin-bottom: 5px;
+    font-weight: bold;
+    word-wrap: break-word;
+    cursor: pointer;
+}
+
+.entry-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.delete-btn {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    background: #ff6b6b;
+    color: #fff;
+    cursor: pointer;
+}
+.delete-btn:hover { background: #ff4b4b; }
+
+.entry-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding-left: 10px;
+}
+
+.arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    border: none;
+    border-radius: 50%;
+    background: #00668B;
+    color: #fff;
+    cursor: pointer;
+}
+.arrow:hover { background: #004d66; }
+
+/* ---------- Time box (dropdowns styled to look like plain text) ---------- */
+.time-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 14px;
+    line-height: normal;
+}
+
+.time-box select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+    text-align-last: center;
+    cursor: pointer;
+}
+.time-box select:focus { outline: none; background: #e8f1f5; border-radius: 2px; }
+
+.time-box .gap { width: 0.25em; }
+
+/* ---------- Phones ---------- */
+@media screen and (max-width: 768px) {
+    .entry { flex-direction: column; gap: 10px; }
+    .entry-main { min-width: 100%; }
+    .entry-side { flex-direction: row; gap: 15px; }
+}
